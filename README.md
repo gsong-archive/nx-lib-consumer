@@ -1,68 +1,150 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Nx Monorepo Libs Consumer
 
-## Available Scripts
+A demo create-react-app ("CRA") app that consumes libraries from [an Nx
+monorepo](https://github.com/gsong/monorepo).
 
-In the project directory, you can run:
+## Working With Packages From registry.npmjs.org
 
-### `npm start`
+Treat this like a normal CRA project, there are no changes in the workflow.
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Working With Nx Libs Locally
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+If you need to make changes to one or more underlying libs in the Nx repo,
+you'll need to link to those libraries locally, instead of using the version
+downloaded from npmjs.org.
 
-### `npm test`
+This will allow you to see and test the changes before publishing the libraries
+for external usage.
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Workflow in Brief
 
-### `npm run build`
+1. Convert this app to a pnpm workspace and reinstall the packages.
+1. Increment the semver for the library to be worked on.
+1. Make code changes in the library and this app.
+1. Publish the updated library.
+1. Convert the app back to non-workspace.
+1. Upgrade to the new library version.
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Workflow Step by Step
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+#### Convert App to Pnpm Workspace
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Navigate to the app project root.
 
-### `npm run eject`
+1. Create the workspace file.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+   ```sh
+   cp pnpm-workspace.yaml.example pnpm-workspace.yaml
+   ```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+1. Adjust the path to the monorepo libs if needed. By default it's assumed that
+   the monorepo and the app are peers in the directory structure, e.g.
+   `src/monorepo` and `src/my-app`.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+1. Install dependencies, linking the monorepo libs locally.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+   ```sh
+   npx pnpm i --no-lockfile
+   ```
 
-## Learn More
+   The `--no-lockfile` switch ensures that we don't overwrite `pnpm-lock.yaml`.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. Verify that the linking worked.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+   ```sh
+   $ ls -l node_modules/@gsong/
+   lrwxr-xr-x 30 george  1 Jun  7:01 ui -> ../../../monorepo/dist/libs/ui
+   ```
 
-### Code Splitting
+   You should see that the library is linked to a local directory.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+#### Increment Library Semver
 
-### Analyzing the Bundle Size
+1. Navigate to the library directory.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+   ```sh
+   cd $(MONOREPO)/libs/ui
+   ```
 
-### Making a Progressive Web App
+1. Upgrade the version number
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+   ```sh
+   npm version [type]
+   ```
 
-### Advanced Configuration
+   Where `[type]` is `major`, `minor`, `patch`, etc.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
+#### Make Code Changes
 
-### Deployment
+1. Set up the real-time development build system.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
+   1. In the monorepo project root:
 
-### `npm run build` fails to minify
+      ```sh
+      npm run build:libs:watch
+      ```
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+   1. In the app project root:
+
+      ```sh
+      npm start
+      ```
+
+1. Make the code changes in the library.
+
+#### Publish the Library
+
+1. Navigate to the monorepo project root.
+
+1. Build the library and its dependencies.
+
+   ```sh
+   nx build ui --with-deps
+   ```
+
+1. Navigate to the library dist directory.
+
+   ```sh
+   cd $(MONOREPO)/dist/libs/ui
+   ```
+
+1. Publish.
+
+   ```sh
+   npm publish --access public
+   ```
+
+#### Convert Back to Non-Workspace App
+
+1. Quit the real-time monorepo build watchers and the CRA dev server.
+
+1. Navigate to the app project root.
+
+1. Remove the workspace file.
+
+   ```sh
+   rm pnpm-workspace.yaml
+   ```
+
+1. Undo the local package link and upgrade.
+
+   ```sh
+   npx pnpm i @gsong/ui@latest
+   ```
+
+1. Verify that the unlinking worked.
+
+   ```sh
+   $ ls -l node_modules/@gsong/
+   lrwxr-xr-x 69 george  1 Jun  8:05 design-system -> ../.pnpm/@gsong/design-system@0.0.1/node_modules/@gsong/design-system
+   lrwxr-xr-x 47 george  1 Jun  8:05 ui -> ../.pnpm/@gsong/ui@0.0.3/node_modules/@gsong/ui
+   ```
+
+   You should see that the library (and its dependency) is linked to the pnpm
+   registry.
+
+1. Verify that everything is working properly.
+
+   ```sh
+   npm run build && npx serve -s build
+   ```
