@@ -1,4 +1,5 @@
 dependencies:
+  '@emotion/core': 10.0.28_react@16.13.1
   '@gsong/ui': 0.0.1
   '@testing-library/jest-dom': 5.9.0
   '@testing-library/react': 10.0.4_react-dom@16.13.1+react@16.13.1
@@ -11647,6 +11648,7 @@ packages:
     resolution:
       integrity: sha512-AX3Zw5iPruN5ie6xGRIDgqkT+ZhnRlZMLMHAs8tg7nRruy2Nb+i5o9bwghAogtM08q1dpr2LVoS8KSTMYpWXUw==
 specifiers:
+  '@emotion/core': ^10.0.28
   '@gsong/ui': ^0.0.1
   '@testing-library/jest-dom': ^5.9.0
   '@testing-library/react': ^10.0.4

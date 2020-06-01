@@ -19,6 +19,6 @@
 .env.production.local
 
 npm-debug.log*
-pnpm-workspace.yaml*
+pnpm-workspace.yaml
 yarn-debug.log*
 yarn-error.log*
